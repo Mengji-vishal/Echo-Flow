@@ -9,11 +9,12 @@ import {
   BarChart3,
   Settings,
   Zap,
-  ChevronRight,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
+import { useAuth } from '@/components/auth/AuthContext';
 
 interface NavLinkItem {
   name: string;
@@ -51,6 +52,8 @@ const secondaryNavItems: NavLinkItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
+  const displayName = user?.name || 'Demo Manager';
 
   const isRouteActive = (href: string) => {
     if (href === '/manager/dashboard') {
@@ -184,25 +187,32 @@ export function Sidebar() {
           </div>
         </div>
 
-        {/* Manager Profile Footer Area */}
-        <div className="pt-4 border-t border-slate-100">
-          <div className="flex items-center justify-between rounded-lg p-2 hover:bg-slate-50 transition-colors cursor-pointer group">
-            <div className="flex items-center space-x-3">
+        {/* Manager Profile Footer Area with Logout */}
+        <div className="pt-4 border-t border-slate-100 space-y-1">
+          <div className="flex items-center justify-between rounded-lg p-2 bg-slate-50 border border-slate-100">
+            <div className="flex items-center space-x-2.5 overflow-hidden">
               <Avatar
-                name="Alex Morgan"
+                name={displayName}
                 size="sm"
                 status="online"
               />
-              <div className="flex flex-col text-left">
-                <span className="text-xs font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
-                  Alex Morgan
+              <div className="flex flex-col text-left truncate">
+                <span className="text-xs font-semibold text-slate-900 truncate">
+                  {displayName}
                 </span>
-                <span className="text-[11px] text-slate-500">
-                  QA & Ops Lead
+                <span className="text-[10px] text-slate-400 capitalize">
+                  {user?.role || 'manager'}
                 </span>
               </div>
             </div>
-            <ChevronRight className="h-3.5 w-3.5 text-slate-400 group-hover:text-slate-600 transition-transform group-hover:translate-x-0.5" />
+            <button
+              type="button"
+              onClick={logout}
+              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+              title="Sign Out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </div>
