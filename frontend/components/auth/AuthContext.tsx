@@ -2,14 +2,28 @@
 
 import * as React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { AuthUser } from '@/types/auth';
-import { getAuthToken, getAuthUser, saveAuthSession, clearAuthSession, loginApi, fetchMeApi } from '@/lib/auth';
+import { AuthUser, UserRole } from '@/types/auth';
+import {
+  getAuthToken,
+  getAuthUser,
+  saveAuthSession,
+  clearAuthSession,
+  loginApi,
+  registerApi,
+  fetchMeApi,
+} from '@/lib/auth';
 
 interface AuthContextType {
   user: AuthUser | null;
   token: string | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<AuthUser>;
+  login: (email: string, password: string, role: UserRole) => Promise<AuthUser>;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    role: UserRole
+  ) => Promise<AuthUser>;
   logout: () => void;
 }
 
@@ -22,35 +36,86 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   React.useEffect(() => {
-    // Check existing stored session on mount
-    const storedToken = getAuthToken();
-    const storedUser = getAuthUser();
+    let isMounted = true;
 
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(storedUser);
-      // Verify token in background
-      fetchMeApi(storedToken)
-        .then((res) => {
-          setUser(res.user);
-          saveAuthSession(storedToken, res.user);
-        })
-        .catch(() => {
-          // Token expired or invalid
+    async function initializeAuth() {
+      try {
+        const storedToken = getAuthToken();
+        const storedUser = getAuthUser();
+
+        if (!storedToken) {
+          if (isMounted) {
+            setToken(null);
+            setUser(null);
+          }
+          return;
+        }
+
+        // Set preliminary state from stored cache
+        if (isMounted) {
+          setToken(storedToken);
+          if (storedUser) {
+            setUser(storedUser);
+          }
+        }
+
+        // Validate token with backend /auth/me
+        try {
+          const res = await fetchMeApi(storedToken);
+          if (isMounted && res.user) {
+            setUser(res.user);
+            setToken(storedToken);
+            saveAuthSession(storedToken, res.user);
+          }
+        } catch (verifyErr) {
+          // Token is expired, invalid, or server returned unauthorized
+          console.warn('Auth session verification failed:', verifyErr);
           clearAuthSession();
+          if (isMounted) {
+            setToken(null);
+            setUser(null);
+          }
+        }
+      } catch (err) {
+        console.error('Unexpected error during auth initialization:', err);
+        clearAuthSession();
+        if (isMounted) {
           setToken(null);
           setUser(null);
-        })
-        .finally(() => {
+        }
+      } finally {
+        if (isMounted) {
           setIsLoading(false);
-        });
-    } else {
-      setIsLoading(false);
+        }
+      }
     }
+
+    initializeAuth();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const login = async (email: string, password: string): Promise<AuthUser> => {
-    const res = await loginApi(email, password);
+  const login = async (
+    email: string,
+    password: string,
+    role: UserRole
+  ): Promise<AuthUser> => {
+    const res = await loginApi(email, password, role);
+    setToken(res.token);
+    setUser(res.user);
+    saveAuthSession(res.token, res.user);
+    return res.user;
+  };
+
+  const register = async (
+    name: string,
+    email: string,
+    password: string,
+    role: UserRole
+  ): Promise<AuthUser> => {
+    const res = await registerApi(name, email, password, role);
     setToken(res.token);
     setUser(res.user);
     saveAuthSession(res.token, res.user);
@@ -65,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -87,9 +152,9 @@ export function ManagerRouteGuard({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     if (!isLoading) {
       if (!token || !user) {
-        router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
+        router.replace(`/login?portal=manager&redirect=${encodeURIComponent(pathname)}`);
       } else if (user.role !== 'manager') {
-        router.replace('/login?error=unauthorized_role');
+        router.replace('/employee/dashboard?error=manager_portal_only');
       }
     }
   }, [user, token, isLoading, router, pathname]);
@@ -106,7 +171,54 @@ export function ManagerRouteGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (!user || user.role !== 'manager') {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center space-y-3">
+          <div className="h-8 w-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-semibold text-slate-500">Redirecting to Employee Workspace...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
+export function EmployeeRouteGuard({ children }: { children: React.ReactNode }) {
+  const { user, token, isLoading } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  React.useEffect(() => {
+    if (!isLoading) {
+      if (!token || !user) {
+        router.replace(`/login?portal=employee&redirect=${encodeURIComponent(pathname)}`);
+      } else if (user.role !== 'employee') {
+        router.replace('/manager/dashboard?error=employee_portal_only');
+      }
+    }
+  }, [user, token, isLoading, router, pathname]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center space-y-3">
+          <div className="h-8 w-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-semibold text-slate-500">Verifying Employee Session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || user.role !== 'employee') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center space-y-3">
+          <div className="h-8 w-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-semibold text-slate-500">Redirecting to Manager Command Center...</p>
+        </div>
+      </div>
+    );
   }
 
   return <>{children}</>;

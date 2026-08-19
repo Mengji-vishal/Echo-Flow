@@ -28,3 +28,6 @@ venv/
 Thumbs.db
 
 .next/
+.env
+.env.*
+!.env.example
