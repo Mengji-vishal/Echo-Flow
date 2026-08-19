@@ -148,7 +148,7 @@ export function EmployeeWorkspace({ initialTab = 'dashboard' }: EmployeeWorkspac
           />
         );
       case 'performance':
-        return <MyPerformance />;
+        return <MyPerformance onNavigate={setActiveTab} />;
       case 'progress':
         return <Progress />;
       case 'achievements':

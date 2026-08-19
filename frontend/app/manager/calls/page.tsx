@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -8,299 +9,342 @@ import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import {
   PhoneCall,
-  Plus,
-  Trash2,
   Sparkles,
   User,
   Clock,
   Radio,
-  X,
   ChevronDown,
-  FileQuestion,
-  Info,
+  AlertCircle,
+  CheckCircle2,
+  Calendar,
+  ChevronRight,
+  RefreshCw,
 } from 'lucide-react';
-import { DEMO_EMPLOYEES, DEFAULT_CALL_SCENARIO, DEFAULT_CALL_QUESTIONS } from '@/lib/demo-data';
+import { useAuth } from '@/components/auth/AuthContext';
+import { getAuthToken } from '@/lib/auth';
+import { fetchEmployeesApi, createCallApi, fetchManagerCallsApi } from '@/lib/calls';
+import { EmployeeItem, CallSummary } from '@/types/call';
+
+const DEFAULT_QUESTIONS = [
+  'Why does the customer need the personal loan?',
+  'What is the customer\'s monthly take-home income?',
+  'What loan tenure do they prefer?',
+  'Do they currently have any existing loans or EMIs?',
+  'What concerns do they have about the monthly EMI payments?',
+];
 
 export default function CallsPage() {
-  const [selectedEmployeeId, setSelectedEmployeeId] = React.useState(DEMO_EMPLOYEES[0].id);
-  const [scenarioText, setScenarioText] = React.useState(DEFAULT_CALL_SCENARIO);
-  const [questions, setQuestions] = React.useState<string[]>([...DEFAULT_CALL_QUESTIONS]);
-  const [isCallingModalOpen, setIsCallingModalOpen] = React.useState(false);
-  const [callStatus, setCallStatus] = React.useState<'idle' | 'initiating' | 'in-progress' | 'completed'>('idle');
+  const { token, user } = useAuth();
+  const [employees, setEmployees] = React.useState<EmployeeItem[]>([]);
+  const [selectedEmployeeId, setSelectedEmployeeId] = React.useState<string>('');
+  const [questions, setQuestions] = React.useState<string[]>([...DEFAULT_QUESTIONS]);
+  const [recentCalls, setRecentCalls] = React.useState<CallSummary[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [successNotice, setSuccessNotice] = React.useState<string | null>(null);
 
-  // Add question
-  const handleAddQuestion = () => {
-    setQuestions([...questions, '']);
-  };
+  const activeToken = token || getAuthToken();
 
-  // Update question text
+  const loadData = React.useCallback(async () => {
+    if (!activeToken) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [empList, callList] = await Promise.all([
+        fetchEmployeesApi(activeToken),
+        fetchManagerCallsApi(activeToken),
+      ]);
+      setEmployees(empList);
+      if (empList.length > 0 && !selectedEmployeeId) {
+        setSelectedEmployeeId(empList[0].id);
+      }
+      setRecentCalls(callList);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load employees and calls data.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeToken, selectedEmployeeId]);
+
+  React.useEffect(() => {
+    loadData();
+  }, [loadData]);
+
   const handleQuestionChange = (index: number, text: string) => {
     const updated = [...questions];
     updated[index] = text;
     setQuestions(updated);
   };
 
-  // Remove question
-  const handleRemoveQuestion = (index: number) => {
-    if (questions.length <= 1) return;
-    const updated = questions.filter((_, i) => i !== index);
-    setQuestions(updated);
-  };
+  const handleStartCall = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeToken) return;
 
-  // Preset question counts
-  const handleSetQuestionCount = (count: number) => {
-    if (count <= DEFAULT_CALL_QUESTIONS.length) {
-      setQuestions(DEFAULT_CALL_QUESTIONS.slice(0, count));
-    } else {
-      const extra = count - DEFAULT_CALL_QUESTIONS.length;
-      const newItems = Array(extra)
-        .fill('')
-        .map((_, i) => `Additional assessment question #${DEFAULT_CALL_QUESTIONS.length + i + 1}`);
-      setQuestions([...DEFAULT_CALL_QUESTIONS, ...newItems]);
+    if (!selectedEmployeeId) {
+      setError('Please select an employee for the assessment call.');
+      return;
+    }
+
+    const emptyIndex = questions.findIndex((q) => !q.trim());
+    if (emptyIndex !== -1) {
+      setError(`Question ${emptyIndex + 1} cannot be empty. Exactly 5 questions are required.`);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    setSuccessNotice(null);
+
+    try {
+      const newCall = await createCallApi(activeToken, selectedEmployeeId, questions);
+      setSuccessNotice(`Assessment Call created successfully (ID: ${newCall.id}) — ready for voice integration.`);
+      // Refresh recent calls list
+      const updatedCalls = await fetchManagerCallsApi(activeToken);
+      setRecentCalls(updatedCalls);
+    } catch (err: any) {
+      setError(err.message || 'Failed to create assessment call.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // Start Call Simulation
-  const handleStartCall = () => {
-    setIsCallingModalOpen(true);
-    setCallStatus('initiating');
-    setTimeout(() => {
-      setCallStatus('in-progress');
-    }, 1500);
+  const selectedEmployee = employees.find((e) => e.id === selectedEmployeeId);
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <Badge variant="success" size="sm">Completed</Badge>;
+      case 'in_progress':
+        return <Badge variant="primary" dot size="sm">In Progress</Badge>;
+      case 'ringing':
+      case 'initiating':
+        return <Badge variant="warning" dot size="sm">Initiating</Badge>;
+      case 'failed':
+        return <Badge variant="danger" size="sm">Failed</Badge>;
+      case 'created':
+      default:
+        return <Badge variant="neutral" size="sm">Created</Badge>;
+    }
   };
 
-  const selectedEmployee =
-    DEMO_EMPLOYEES.find((e) => e.id === selectedEmployeeId) || DEMO_EMPLOYEES[0];
+  const formatDate = (isoStr: string) => {
+    try {
+      const d = new Date(isoStr);
+      return d.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return isoStr;
+    }
+  };
+
+  const formatDuration = (seconds?: number | null) => {
+    if (!seconds) return '—';
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-8 max-w-5xl">
       {/* Page Header */}
       <PageHeader
-        title="Configure Phone Assessment Call"
-        description="Select an employee, set the customer scenario, and define the exact questions the AI caller will ask during the real phone assessment."
+        title="Assessment Calls"
+        description="Select an employee, configure exactly 5 assessment questions, and initiate AI phone assessment calls."
         badge={<Badge variant="primary" dot>AI Phone Dispatch</Badge>}
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadData}
+            isLoading={isLoading}
+            className="gap-1.5"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            <span>Refresh</span>
+          </Button>
+        }
       />
 
-      {/* Main Configuration Grid */}
+      {/* Success Notification Banner */}
+      {successNotice && (
+        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-start justify-between text-xs animate-in fade-in-50">
+          <div className="flex items-center space-x-2.5">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+            <span className="font-semibold">{successNotice}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSuccessNotice(null)}
+            className="text-emerald-600 hover:text-emerald-800 font-bold ml-2 text-sm"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Error Banner */}
+      {error && (
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 flex items-start space-x-2.5 text-xs animate-in fade-in-50">
+          <AlertCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Call Creation Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Columns: Employee, Scenario & Questions Builder */}
+        {/* Left 2 Columns: Employee Selection & 5 Questions */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Step 1: Select Target Employee */}
-          <Card>
-            <CardHeader className="pb-4">
-              <div className="flex items-center space-x-2.5">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
-                  1
-                </span>
-                <CardTitle className="text-base">Target Employee</CardTitle>
-              </div>
-              <CardDescription>
-                Select the team member who will receive the assessment phone call.
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="space-y-4 pt-0">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
-                  Select Employee
-                </label>
-                <div className="relative">
-                  <select
-                    value={selectedEmployeeId}
-                    onChange={(e) => setSelectedEmployeeId(e.target.value)}
-                    className="w-full h-10 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none font-medium"
-                  >
-                    {DEMO_EMPLOYEES.map((emp) => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.name} — {emp.role} (QA: {emp.qaScore}%)
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                </div>
-              </div>
-
-              {/* Selected Employee Quick Context */}
-              {selectedEmployee && (
-                <div className="p-3.5 rounded-lg border border-slate-200/80 bg-slate-50/75 flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Avatar name={selectedEmployee.name} size="md" status="online" />
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-900">{selectedEmployee.name}</h4>
-                      <p className="text-[11px] text-slate-500">{selectedEmployee.role} • {selectedEmployee.department}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs text-slate-400 block font-medium">Current QA</span>
-                    <span className="text-sm font-bold text-slate-900">{selectedEmployee.qaScore}%</span>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Step 2: Scenario / Context */}
-          <Card>
-            <CardHeader className="pb-4">
-              <div className="flex items-center space-x-2.5">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
-                  2
-                </span>
-                <CardTitle className="text-base">Scenario & Conversation Context</CardTitle>
-              </div>
-              <CardDescription>
-                Provide the customer background situation and inquiry details for the simulation.
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="pt-0">
-              <textarea
-                rows={3}
-                value={scenarioText}
-                onChange={(e) => setScenarioText(e.target.value)}
-                placeholder="Describe the caller background, intent, constraints, and questions to test..."
-                className="w-full rounded-lg border border-slate-300 bg-white p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none font-sans"
-              />
-            </CardContent>
-          </Card>
-
-          {/* Step 3: Questions the AI Caller will ask */}
-          <Card>
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
+          <form id="call-form" onSubmit={handleStartCall} className="space-y-6">
+            {/* Step 1: Select Employee */}
+            <Card>
+              <CardHeader className="pb-3">
                 <div className="flex items-center space-x-2.5">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
-                    3
+                    1
                   </span>
-                  <div>
-                    <CardTitle className="text-base">Questions for the AI Caller</CardTitle>
-                    <CardDescription>
-                      The AI caller will naturally ask these required questions during the conversation.
-                    </CardDescription>
+                  <CardTitle className="text-base">Target Representative</CardTitle>
+                </div>
+                <CardDescription>
+                  Select the employee in PostgreSQL who will receive the phone call assessment.
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-4 pt-0">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                    Select Employee
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={selectedEmployeeId}
+                      onChange={(e) => setSelectedEmployeeId(e.target.value)}
+                      disabled={isLoading || employees.length === 0}
+                      className="w-full h-10 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none font-medium"
+                    >
+                      {employees.length === 0 ? (
+                        <option value="">No employees found</option>
+                      ) : (
+                        employees.map((emp) => (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.name} — {emp.email}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                   </div>
                 </div>
 
-                {/* Quick Count Pills */}
-                <div className="hidden sm:flex items-center space-x-1 bg-slate-100 p-1 rounded-lg">
-                  <span className="text-[11px] font-semibold text-slate-400 px-2">Preset:</span>
-                  {[3, 4, 5].map((cnt) => (
-                    <button
-                      key={cnt}
-                      type="button"
-                      onClick={() => handleSetQuestionCount(cnt)}
-                      className={`px-2 py-0.5 rounded text-xs font-semibold transition-colors ${
-                        questions.length === cnt
-                          ? 'bg-white text-blue-600 shadow-2xs'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      {cnt}
-                    </button>
-                  ))}
+                {/* Selected Employee Card */}
+                {selectedEmployee && (
+                  <div className="p-3.5 rounded-lg border border-slate-200/80 bg-slate-50/75 flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Avatar name={selectedEmployee.name} size="md" status="online" />
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-900">{selectedEmployee.name}</h4>
+                        <p className="text-[11px] text-slate-500">{selectedEmployee.email}</p>
+                      </div>
+                    </div>
+                    <Badge variant="neutral" size="sm">
+                      ID: {selectedEmployee.id}
+                    </Badge>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Step 2: 5 Configured Questions */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2.5">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                      2
+                    </span>
+                    <div>
+                      <CardTitle className="text-base">5 Assessment Questions</CardTitle>
+                      <CardDescription>
+                        The AI caller will ask these exact 5 questions in sequential order.
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <Badge variant="primary" size="sm">5 Required</Badge>
                 </div>
-              </div>
-            </CardHeader>
+              </CardHeader>
 
-            <CardContent className="space-y-3 pt-0">
-              {questions.map((q, idx) => (
-                <div key={idx} className="flex items-start space-x-2 group animate-in fade-in-50 duration-150">
-                  <span className="flex h-9 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-600">
-                    Q{idx + 1}
-                  </span>
-
-                  <input
-                    type="text"
-                    value={q}
-                    onChange={(e) => handleQuestionChange(idx, e.target.value)}
-                    placeholder={`Enter question #${idx + 1}...`}
-                    className="flex-1 h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveQuestion(idx)}
-                    disabled={questions.length <= 1}
-                    className="h-9 w-9 flex items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-30 disabled:pointer-events-none transition-colors"
-                    title="Remove Question"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-
-              <div className="pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddQuestion}
-                  className="w-full gap-1.5 border-dashed border-slate-300 text-slate-700 hover:border-blue-500 hover:text-blue-600"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Add Question</span>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              <CardContent className="space-y-3 pt-0">
+                {questions.map((q, idx) => (
+                  <div key={idx} className="flex items-start space-x-2">
+                    <span className="flex h-9 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-xs font-bold text-blue-700 border border-blue-200">
+                      Q{idx + 1}
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      value={q}
+                      onChange={(e) => handleQuestionChange(idx, e.target.value)}
+                      placeholder={`Assessment question #${idx + 1}...`}
+                      className="flex-1 h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </form>
         </div>
 
-        {/* Right 1 Column: Summary & Launch CTA */}
+        {/* Right 1 Column: Call Summary & Dispatch Button */}
         <div className="space-y-6">
-          {/* Assessment Summary Card */}
           <Card className="border-blue-200 bg-gradient-to-b from-white to-blue-50/20 shadow-md">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Call Summary</CardTitle>
-              <CardDescription>Review simulation parameters before dispatching</CardDescription>
+              <CardTitle className="text-base">Assessment Summary</CardTitle>
+              <CardDescription>Review call parameters before dispatching</CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-4 pt-0">
               <div className="space-y-2.5 text-xs text-slate-600">
                 <div className="flex justify-between py-1 border-b border-slate-100">
                   <span className="text-slate-400 font-medium">Target Representative</span>
-                  <span className="font-bold text-slate-900">{selectedEmployee.name}</span>
+                  <span className="font-bold text-slate-900">
+                    {selectedEmployee?.name || '—'}
+                  </span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-400 font-medium">Configured Questions</span>
-                  <span className="font-bold text-blue-600">{questions.length} questions</span>
+                  <span className="text-slate-400 font-medium">Questions Configured</span>
+                  <span className="font-bold text-blue-600">5 Questions</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-400 font-medium">Estimated Duration</span>
-                  <span className="font-bold text-slate-900">~{questions.length + 2}-{questions.length + 4} minutes</span>
+                  <span className="text-slate-400 font-medium">Estimated Call Time</span>
+                  <span className="font-bold text-slate-900">~6-8 minutes</span>
                 </div>
                 <div className="flex justify-between py-1">
-                  <span className="text-slate-400 font-medium">Execution Pipeline</span>
+                  <span className="text-slate-400 font-medium">Status on Creation</span>
                   <span className="font-medium text-emerald-700 flex items-center">
                     <Radio className="h-3 w-3 mr-1 text-emerald-500 animate-pulse" />
-                    AI Caller → Phone → QA
+                    Ready in Database
                   </span>
                 </div>
               </div>
 
-              {/* Primary Call Launch CTA */}
               <div className="pt-2">
                 <Button
-                  onClick={handleStartCall}
+                  form="call-form"
+                  type="submit"
                   size="lg"
+                  isLoading={isSubmitting}
+                  disabled={!selectedEmployeeId || isSubmitting}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold gap-2 shadow-md shadow-blue-500/20"
                 >
                   <PhoneCall className="h-4 w-4" />
                   <span>Start Assessment Call</span>
                 </Button>
                 <p className="text-[11px] text-center text-slate-400 mt-2">
-                  The AI phone agent will dial {selectedEmployee.name} and ask the {questions.length} configured questions.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Context Guide Note */}
-          <Card className="bg-slate-50 border-slate-200/80">
-            <CardContent className="p-4 flex items-start space-x-3 text-xs text-slate-600">
-              <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold text-slate-800">How this works</p>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  The AI caller calls the representative on their phone, converses naturally based on the scenario context, and ensures all configured questions are asked.
+                  Creates the call record with 5 questions in PostgreSQL.
                 </p>
               </div>
             </CardContent>
@@ -308,66 +352,87 @@ export default function CallsPage() {
         </div>
       </div>
 
-      {/* Call Initiation Simulation Modal */}
-      {isCallingModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in-50 duration-200">
-          <Card className="max-w-md w-full border-blue-200 shadow-2xl bg-white animate-in zoom-in-95 duration-150">
-            <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center space-x-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white">
-                  <PhoneCall className="h-4 w-4 animate-bounce" />
-                </div>
-                <div>
-                  <CardTitle className="text-base">AI Phone Assessment</CardTitle>
-                  <CardDescription>Live Telephony Dispatch</CardDescription>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsCallingModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </CardHeader>
+      {/* Recent Assessment Calls Table */}
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base">Recent Assessment Calls</CardTitle>
+              <CardDescription>
+                Calls created and recorded for representative evaluations
+              </CardDescription>
+            </div>
+            <Badge variant="neutral" size="sm">{recentCalls.length} Total</Badge>
+          </div>
+        </CardHeader>
 
-            <CardContent className="p-6 text-center space-y-4">
-              <div className="py-4">
-                <Avatar name={selectedEmployee.name} size="xl" className="mx-auto mb-3 ring-4 ring-blue-100" />
-                <h3 className="text-base font-bold text-slate-900">{selectedEmployee.name}</h3>
-                <p className="text-xs text-slate-500">{selectedEmployee.role}</p>
-
-                <div className="mt-4 inline-flex items-center space-x-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full text-xs font-semibold border border-blue-200">
-                  <Radio className="h-3 w-3 text-blue-600 animate-ping" />
-                  <span>
-                    {callStatus === 'initiating' ? 'Connecting to AI Telephony Gateway...' : 'Live Assessment Call In Progress...'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 rounded-lg p-3 text-left border border-slate-100 space-y-1.5 text-xs text-slate-600">
-                <p className="font-semibold text-slate-800">Questions Queue ({questions.length}):</p>
-                <ol className="list-decimal pl-4 space-y-1 text-[11px] text-slate-600">
-                  {questions.slice(0, 3).map((q, i) => (
-                    <li key={i} className="truncate">{q}</li>
+        <CardContent className="pt-0">
+          {recentCalls.length === 0 ? (
+            <div className="text-center py-10 border border-dashed border-slate-200 rounded-xl">
+              <PhoneCall className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+              <p className="text-sm font-semibold text-slate-700">No assessment calls created yet</p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Configure 5 questions above and click "Start Assessment Call" to create your first call.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    <th className="pb-3 pl-2">Employee</th>
+                    <th className="pb-3">Status</th>
+                    <th className="pb-3">Questions</th>
+                    <th className="pb-3">Created Date</th>
+                    <th className="pb-3">Duration</th>
+                    <th className="pb-3 pr-2 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {recentCalls.map((call) => (
+                    <tr key={call.id} className="hover:bg-slate-50/80 transition-colors group">
+                      <td className="py-3.5 pl-2">
+                        <div className="flex items-center space-x-2.5">
+                          <Avatar name={call.employee_name || 'Employee'} size="sm" />
+                          <div>
+                            <span className="font-bold text-slate-900 block">
+                              {call.employee_name || 'Unnamed Employee'}
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              {call.employee_email || call.employee_id}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5">
+                        {getStatusBadge(call.status)}
+                      </td>
+                      <td className="py-3.5 text-slate-600 font-medium">
+                        {call.questions_count || 5} Questions
+                      </td>
+                      <td className="py-3.5 text-slate-500">
+                        {formatDate(call.created_at)}
+                      </td>
+                      <td className="py-3.5 text-slate-500 font-mono">
+                        {formatDuration(call.duration_seconds)}
+                      </td>
+                      <td className="py-3.5 pr-2 text-right">
+                        <Link
+                          href={`/manager/calls/${call.id}`}
+                          className="inline-flex items-center space-x-1 text-xs font-bold text-blue-600 hover:text-blue-700 group-hover:underline"
+                        >
+                          <span>View Details</span>
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </Link>
+                      </td>
+                    </tr>
                   ))}
-                  {questions.length > 3 && (
-                    <li className="text-slate-400 italic">+{questions.length - 3} more questions...</li>
-                  )}
-                </ol>
-              </div>
-
-              <Button
-                variant="outline"
-                onClick={() => setIsCallingModalOpen(false)}
-                className="w-full text-xs"
-              >
-                Dismiss View
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
