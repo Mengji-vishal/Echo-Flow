@@ -25,10 +25,19 @@ export function Header() {
     }
     if (path === '/manager/calls' || path.startsWith('/manager/calls')) {
       return {
-        title: 'Phone Assessment Call',
+        title: 'Phone Assessment Calls',
         breadcrumbs: [
           { label: 'Echo-Flow', href: '/manager/dashboard' },
-          { label: 'Configure Call', current: true },
+          { label: 'Assessment Calls', current: true },
+        ],
+      };
+    }
+    if (path === '/manager/transcripts' || path.startsWith('/manager/transcripts')) {
+      return {
+        title: 'Assessment Call Transcripts',
+        breadcrumbs: [
+          { label: 'Echo-Flow', href: '/manager/dashboard' },
+          { label: 'Transcripts', current: true },
         ],
       };
     }

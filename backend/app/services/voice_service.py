@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 from twilio.rest import Client
 from twilio.base.exceptions import TwilioRestException
-from twilio.twiml.voice_response import VoiceResponse, Connect, ConversationRelay
+from twilio.twiml.voice_response import VoiceResponse, Gather, Say, Hangup, Redirect
 from app.core.config import settings
 
 logger = logging.getLogger("voice_service")
@@ -11,7 +11,7 @@ logger = logging.getLogger("voice_service")
 class VoiceService:
     """
     Twilio Programmable Voice Service Boundary.
-    Responsible for initiating outbound assessment calls and generating TwiML.
+    Responsible for initiating outbound assessment calls and generating standard Programmable Voice TwiML.
     """
 
     def __init__(self):
@@ -27,7 +27,7 @@ class VoiceService:
 
     def initiate_outbound_call(self, call_id: str, to_number: str) -> str:
         """
-        Initiate an outbound Twilio phone call to the employee's phone number using basic supported parameters.
+        Initiate an outbound Twilio phone call to the employee's phone number.
         Returns the Twilio Call SID (stored in provider_call_id).
         """
         if not settings.TWILIO_PHONE_NUMBER:
@@ -40,7 +40,6 @@ class VoiceService:
         clean_from = settings.TWILIO_PHONE_NUMBER.strip()
 
         try:
-            # Use minimal standard parameters supported on all Twilio account tiers
             twilio_call = self.client.calls.create(
                 to=clean_to,
                 from_=clean_from,
@@ -54,27 +53,48 @@ class VoiceService:
             logger.error(f"Unexpected error initiating call {call_id}: {str(e)}")
             raise ValueError(f"Voice service failed to initiate outbound call: {str(e)}")
 
-    def generate_conversation_relay_twiml(self, call_id: str) -> str:
+    def generate_question_twiml(
+        self,
+        call_id: str,
+        question_number: int,
+        question_text: str,
+        is_retry: bool = False,
+    ) -> str:
         """
-        Generate TwiML response connecting the live call to the FastAPI Conversation Relay WebSocket.
-        Dynamically extracts host from configured PUBLIC_BASE_URL and converts https:// to wss://.
+        Generate TwiML using <Gather input="speech"> and <Say> to speak a question
+        and capture the employee's voice answer.
         """
-        from urllib.parse import urlparse
+        public_base = settings.PUBLIC_BASE_URL.rstrip("/")
+        action_url = f"{public_base}/twilio/voice/{call_id}/respond"
 
-        raw_url = settings.PUBLIC_BASE_URL.strip()
-        if not raw_url.startswith("http://") and not raw_url.startswith("https://"):
-            raw_url = f"https://{raw_url}"
-
-        parsed = urlparse(raw_url)
-        host = parsed.netloc or parsed.path.strip("/")
-        ws_url = f"wss://{host}/twilio/ws/{call_id}"
+        if is_retry:
+            speech_prompt = f"I didn't catch that. Please answer again. Question {question_number}: {question_text}"
+        elif question_number == 1:
+            speech_prompt = f"Hello. This is your Echo-Flow assessment. Question 1: {question_text}"
+        else:
+            speech_prompt = f"Thank you. Question {question_number}: {question_text}"
 
         response = VoiceResponse()
-        connect = Connect()
-        relay = ConversationRelay(url=ws_url)
-        connect.append(relay)
-        response.append(connect)
+        gather = Gather(
+            input="speech",
+            action=action_url,
+            method="POST",
+            speech_timeout="auto",
+        )
+        gather.say(speech_prompt)
+        response.append(gather)
+        # Fallback redirect if user remained silent
+        response.redirect(action_url, method="POST")
 
+        return str(response)
+
+    def generate_completion_twiml(self) -> str:
+        """
+        Generate closing TwiML terminating the completed assessment call cleanly.
+        """
+        response = VoiceResponse()
+        response.say("Thank you. Your assessment is complete.")
+        response.hangup()
         return str(response)
 
 

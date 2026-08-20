@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   PhoneCall,
+  FileText,
   BarChart3,
   Settings,
   Zap,
@@ -36,6 +37,11 @@ const mainNavItems: NavLinkItem[] = [
     icon: PhoneCall,
   },
   {
+    name: 'Transcripts',
+    href: '/manager/transcripts',
+    icon: FileText,
+  },
+  {
     name: 'Analytics',
     href: '/manager/analytics',
     icon: BarChart3,
@@ -61,6 +67,9 @@ export function Sidebar() {
     }
     if (href === '/manager/calls') {
       return pathname.startsWith('/manager/calls');
+    }
+    if (href === '/manager/transcripts') {
+      return pathname.startsWith('/manager/transcripts');
     }
     if (href === '/manager/analytics') {
       return pathname.startsWith('/manager/analytics');
