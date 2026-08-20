@@ -6,6 +6,7 @@ from app.core.auth_middleware import require_manager, UserResponse
 from app.services.call_service import call_service
 from app.services.analysis_service import analysis_service
 from app.services.training_service import training_service
+from app.services.voice_service import voice_service
 from app.schemas.call import (
     CreateCallRequest,
     CallDetailResponse,
@@ -23,7 +24,7 @@ router = APIRouter(prefix="/calls", tags=["Calls"])
     "",
     response_model=CallDetailResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Create a new assessment call with exactly 5 questions",
+    summary="Create a new assessment call with exactly 5 questions and initiate Twilio outbound call",
 )
 def create_call(
     request: CreateCallRequest,
@@ -37,12 +38,34 @@ def create_call(
             employee_id=request.employee_id,
             questions=request.questions,
         )
-        return new_call.to_dict(include_details=True)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
+
+    # If employee has a configured phone number, trigger Twilio outbound call
+    employee = new_call.employee
+    if employee and employee.phone_number:
+        try:
+            sid = voice_service.initiate_outbound_call(
+                call_id=new_call.id,
+                to_number=employee.phone_number,
+            )
+            new_call.provider_call_id = sid
+            new_call.status = "initiating"
+            db.commit()
+            db.refresh(new_call)
+        except Exception as e:
+            new_call.status = "failed"
+            db.commit()
+            db.refresh(new_call)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Outbound phone call initiation failed: {str(e)}",
+            )
+
+    return new_call.to_dict(include_details=True)
 
 
 @router.get(

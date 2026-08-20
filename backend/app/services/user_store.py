@@ -29,9 +29,9 @@ class UserStore:
             manager = user_service.create_manager(db, name, email, plain_password, user_id)
             return manager.to_dict()
 
-    def create_employee(self, name: str, email: str, plain_password: str, user_id: Optional[str] = None) -> Dict[str, Any]:
+    def create_employee(self, name: str, email: str, plain_password: str, phone_number: Optional[str] = None, user_id: Optional[str] = None) -> Dict[str, Any]:
         with SessionLocal() as db:
-            employee = user_service.create_employee(db, name, email, plain_password, user_id)
+            employee = user_service.create_employee(db, name, email, plain_password, phone_number, user_id)
             return employee.to_dict()
 
     def create_user(
@@ -40,12 +40,13 @@ class UserStore:
         email: str,
         plain_password: str,
         role: str,
+        phone_number: Optional[str] = None,
         user_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         if role == "manager":
             return self.create_manager(name, email, plain_password, user_id)
         elif role == "employee":
-            return self.create_employee(name, email, plain_password, user_id)
+            return self.create_employee(name, email, plain_password, phone_number, user_id)
         else:
             raise ValueError(f"Invalid role '{role}'. Allowed roles are 'manager' or 'employee'.")
 

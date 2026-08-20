@@ -24,6 +24,34 @@ export async function fetchEmployeesApi(token: string): Promise<EmployeeItem[]> 
   return data as EmployeeItem[];
 }
 
+export async function updateEmployeePhoneApi(
+  token: string,
+  employeeId: string,
+  phoneNumber: string
+): Promise<EmployeeItem> {
+  const res = await fetch(`${API_BASE_URL}/employees/${employeeId}/phone`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ phone_number: phoneNumber }),
+  });
+
+  let data: any = {};
+  try {
+    data = await res.json();
+  } catch {
+    data = {};
+  }
+
+  if (!res.ok) {
+    throw new Error(formatErrorMessage(data.detail || data.message, 'Failed to update employee phone number.'));
+  }
+
+  return data as EmployeeItem;
+}
+
 export async function createCallApi(
   token: string,
   employeeId: string,

@@ -3,7 +3,8 @@ from typing import List
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load environment variables with override
+load_dotenv(override=True)
 
 
 class Settings(BaseSettings):
@@ -27,6 +28,12 @@ class Settings(BaseSettings):
         "DATABASE_URL",
         f"postgresql://{os.getenv('POSTGRES_USER', 'postgres')}:{os.getenv('POSTGRES_PASSWORD', '21061')}@{os.getenv('POSTGRES_HOST', 'localhost')}:{os.getenv('POSTGRES_PORT', '5432')}/{os.getenv('POSTGRES_DB', 'echo_flow')}"
     )
+
+    # Twilio Programmable Voice & Conversation Relay Configuration
+    TWILIO_ACCOUNT_SID: str = os.getenv("TWILIO_ACCOUNT_SID", "")
+    TWILIO_AUTH_TOKEN: str = os.getenv("TWILIO_AUTH_TOKEN", "")
+    TWILIO_PHONE_NUMBER: str = os.getenv("TWILIO_PHONE_NUMBER", "")
+    PUBLIC_BASE_URL: str = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000")
 
     # CORS Configuration - Explicit local development origins
     CORS_ORIGINS: List[str] = [

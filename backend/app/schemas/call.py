@@ -79,6 +79,7 @@ class CallSummaryResponse(BaseModel):
     employee_id: str
     employee_name: Optional[str] = None
     employee_email: Optional[str] = None
+    employee_phone: Optional[str] = None
     status: str
     started_at: Optional[str] = None
     ended_at: Optional[str] = None
@@ -95,6 +96,7 @@ class CallDetailResponse(BaseModel):
     employee_id: str
     employee_name: Optional[str] = None
     employee_email: Optional[str] = None
+    employee_phone: Optional[str] = None
     status: str
     started_at: Optional[str] = None
     ended_at: Optional[str] = None
@@ -111,5 +113,6 @@ class EmployeeItemResponse(BaseModel):
     id: str
     name: str
     email: str
+    phone_number: Optional[str] = None
     role: str = "employee"
     created_at: Optional[str] = None

@@ -71,6 +71,7 @@ class UserService:
         name: str,
         email: str,
         plain_password: str,
+        phone_number: Optional[str] = None,
         user_id: Optional[str] = None,
     ) -> Employee:
         """Create and insert a new record into the employees table ONLY."""
@@ -85,6 +86,7 @@ class UserService:
             id=uid,
             name=name.strip(),
             email=normalized_email,
+            phone_number=phone_number.strip() if phone_number else None,
             password_hash=password_hash,
         )
         db.add(new_employee)

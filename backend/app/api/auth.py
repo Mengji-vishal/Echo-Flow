@@ -39,6 +39,7 @@ async def register(register_data: RegisterRequest):
             email=register_data.email,
             plain_password=register_data.password,
             role=register_data.role,
+            phone_number=register_data.phone_number,
         )
     except ValueError as e:
         raise HTTPException(
@@ -57,6 +58,7 @@ async def register(register_data: RegisterRequest):
         id=new_user["id"],
         name=new_user["name"],
         email=new_user["email"],
+        phone_number=new_user.get("phone_number"),
         role=new_user["role"],
         created_at=new_user.get("created_at"),
     )

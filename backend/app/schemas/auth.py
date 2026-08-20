@@ -1,10 +1,11 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 
 
 class RegisterRequest(BaseModel):
     name: str = Field(..., min_length=2, max_length=100, description="Full Name")
     email: str = Field(..., min_length=5, max_length=150, description="User Email")
+    phone_number: Optional[str] = Field(None, max_length=32, description="E.164 phone number (e.g. +1234567890)")
     password: str = Field(..., min_length=6, max_length=100, description="Plain Text Password")
     role: str = Field(..., description="Role: 'manager' or 'employee'")
 
@@ -51,6 +52,7 @@ class UserResponse(BaseModel):
     id: str
     name: str
     email: str
+    phone_number: Optional[str] = None
     role: str
     created_at: Optional[str] = None
 

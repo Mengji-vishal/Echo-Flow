@@ -2,6 +2,7 @@ export interface EmployeeItem {
   id: string;
   name: string;
   email: string;
+  phone_number?: string | null;
   role: string;
   created_at?: string | null;
 }
@@ -79,6 +80,7 @@ export interface CallSummary {
   employee_id: string;
   employee_name?: string | null;
   employee_email?: string | null;
+  employee_phone?: string | null;
   status: 'created' | 'initiating' | 'ringing' | 'in_progress' | 'completed' | 'failed' | string;
   started_at?: string | null;
   ended_at?: string | null;

@@ -7,6 +7,7 @@ from app.api.calls import router as calls_router
 from app.api.employees import router as employees_router
 from app.api.employee_portal import router as employee_portal_router
 from app.api.manager_analytics import router as manager_analytics_router
+from app.api.twilio_voice import router as twilio_voice_router
 from app.core.auth_middleware import require_manager, require_employee, UserResponse
 from app.db.session import init_db, SessionLocal
 from app.services.user_service import user_service
@@ -46,6 +47,7 @@ app.include_router(calls_router)
 app.include_router(employees_router)
 app.include_router(employee_portal_router)
 app.include_router(manager_analytics_router)
+app.include_router(twilio_voice_router)
 
 
 @app.get("/")

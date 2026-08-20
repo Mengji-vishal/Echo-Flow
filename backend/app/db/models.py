@@ -43,6 +43,7 @@ class Employee(Base):
     id = Column(String(64), primary_key=True, index=True)
     name = Column(String(255), nullable=False)
     email = Column(String(255), unique=True, nullable=False, index=True)
+    phone_number = Column(String(32), nullable=True, index=True)
     password_hash = Column(String(255), nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
@@ -54,6 +55,7 @@ class Employee(Base):
             "id": self.id,
             "name": self.name,
             "email": self.email,
+            "phone_number": self.phone_number,
             "role": "employee",
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
@@ -86,6 +88,7 @@ class Call(Base):
             "employee_id": self.employee_id,
             "employee_name": self.employee.name if self.employee else None,
             "employee_email": self.employee.email if self.employee else None,
+            "employee_phone": self.employee.phone_number if self.employee else None,
             "status": self.status,
             "started_at": self.started_at.isoformat() if self.started_at else None,
             "ended_at": self.ended_at.isoformat() if self.ended_at else None,

@@ -19,11 +19,13 @@ CREATE TABLE IF NOT EXISTS employees (
     id VARCHAR(64) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
+    phone_number VARCHAR(32) NULL,
     password_hash VARCHAR(255) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_employees_email ON employees (LOWER(email));
+CREATE INDEX IF NOT EXISTS idx_employees_phone_number ON employees (phone_number);
 
 -- Table 3: Calls
 CREATE TABLE IF NOT EXISTS calls (
