@@ -46,8 +46,8 @@ def get_team_analytics(
             .all()
         )
         emp_scores = [c.analysis.overall_score for c in calls if c.analysis]
-        avg_score = round(sum(emp_scores) / len(emp_scores)) if emp_scores else 82
-        latest_score = emp_scores[0] if emp_scores else 84
+        avg_score = round(sum(emp_scores) / len(emp_scores)) if emp_scores else 0
+        latest_score = emp_scores[0] if emp_scores else 0
         if emp_scores:
             total_scores.extend(emp_scores)
 
@@ -62,14 +62,18 @@ def get_team_analytics(
                         metric_accumulators[k].append(int(val))
 
         emp_metrics = {
-            k: (round(sum(v) / len(v)) if v else 80)
+            k: (round(sum(v) / len(v)) if v else 0)
             for k, v in emp_metric_sums.items()
         }
 
-        # Determine strongest and weakest skill
-        sorted_skills = sorted(emp_metrics.items(), key=lambda x: x[1], reverse=True)
-        strongest = sorted_skills[0][0] if sorted_skills else "communication"
-        weakest = sorted_skills[-1][0] if sorted_skills else "closing"
+        # Determine strongest and weakest skill only if employee has evaluated calls
+        if emp_scores:
+            sorted_skills = sorted(emp_metrics.items(), key=lambda x: x[1], reverse=True)
+            strongest = format_skill_name(sorted_skills[0][0])
+            weakest = format_skill_name(sorted_skills[-1][0])
+        else:
+            strongest = "N/A"
+            weakest = "N/A"
 
         team_members_data.append({
             "id": emp.id,
@@ -79,15 +83,15 @@ def get_team_analytics(
             "qa_score": avg_score,
             "latest_score": latest_score,
             "total_calls": len(calls),
-            "strongest_skill": format_skill_name(strongest),
-            "weakest_skill": format_skill_name(weakest),
+            "strongest_skill": strongest,
+            "weakest_skill": weakest,
             "skills": emp_metrics,
         })
 
-    team_avg_score = round(sum(total_scores) / len(total_scores)) if total_scores else 84
+    team_avg_score = round(sum(total_scores) / len(total_scores)) if total_scores else 0
 
     team_competency_breakdown = {
-        k: (round(sum(v) / len(v)) if v else 82)
+        k: (round(sum(v) / len(v)) if v else 0)
         for k, v in metric_accumulators.items()
     }
 

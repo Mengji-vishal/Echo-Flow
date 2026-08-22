@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.db.models import Call, CallQuestion, CallTranscript
 from app.services.voice_service import voice_service
+from app.services.analysis_service import analysis_service
+from app.services.training_service import training_service
 
 logger = logging.getLogger("twilio_voice")
 
@@ -148,7 +150,7 @@ async def twilio_voice_respond_webhook(
 ):
     """
     Twilio requests this webhook when the employee speaks in response to a question.
-    Ingests SpeechResult, saves employee turn to PostgreSQL, advances to the next question (or completes the call).
+    Ingests SpeechResult, saves employee turn to PostgreSQL, advances to next question (or completes call & runs Gemini analysis).
     """
     params = await parse_request_params(request)
 
@@ -262,6 +264,15 @@ async def twilio_voice_respond_webhook(
         flush=True,
     )
     logger.info(f"Assessment call '{call_id}' completed with 5/5 answers. Total duration: {call.duration_seconds}s")
+
+    # 4. Trigger Post-Call Gemini Analysis and Training Generation
+    try:
+        analysis = analysis_service.analyze_call(db=db, call_id=call_id)
+        training_service.generate_modules_for_call(db=db, call_id=call_id, analysis=analysis)
+        print(f"   [AI Performance Analysis & Training] Evaluated with Gemini & Generated Training Modules for call '{call_id}'.", flush=True)
+        logger.info(f"Gemini evaluation and training generation succeeded for call '{call_id}' (QA Score: {analysis.overall_score})")
+    except Exception as e:
+        logger.error(f"Post-call analysis generation failed for call '{call_id}': {str(e)}")
 
     completion_twiml = voice_service.generate_completion_twiml()
     return Response(content=completion_twiml, media_type="application/xml")

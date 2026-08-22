@@ -5,7 +5,6 @@ import { Card } from '@/components/employee/common/Card';
 import { Badge } from '@/components/employee/common/Badge';
 import { ProgressBar } from '@/components/employee/common/ProgressBar';
 import { PracticeCard, PracticeScenarioInfo } from '@/components/employee/practice/PracticeCard';
-import { mockAssessments } from '@shared/api/mockData';
 import { Assessment } from '@shared/types';
 import { 
   PlayCircle, 
@@ -13,7 +12,7 @@ import {
   History, 
   Lock, 
   CheckCircle2, 
-  MessageSquare
+  MessageSquare 
 } from 'lucide-react';
 
 interface PracticeProps {
@@ -32,14 +31,8 @@ export const Practice: React.FC<PracticeProps> = ({
   userTests
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'scenarios' | 'roadmap' | 'history'>('scenarios');
-  
-  // Video player modal states
   const [playingVideoModule, setPlayingVideoModule] = useState<number | null>(null);
-  
-  // History inspector states
-  const [selectedHistoryCall, setSelectedHistoryCall] = useState<Assessment | null>(
-    mockAssessments.filter(a => a.status === 'completed')[0] || null
-  );
+  const [selectedHistoryCall, setSelectedHistoryCall] = useState<Assessment | null>(userTests[0] || null);
 
   const scenarios: PracticeScenarioInfo[] = [
     {

@@ -15,14 +15,51 @@ class TrainingModuleResponse(BaseModel):
     learning_objectives: List[str] = []
     content: Dict[str, Any] = {}
     progress: int = 0
-    status: Literal["active", "in_progress", "completed"] = "active"
+    status: Literal["active", "in_progress", "completed", "ready_for_quiz"] = "active"
+    has_quiz: bool = False
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
 
 
 class UpdateTrainingProgressRequest(BaseModel):
     progress: int = Field(..., ge=0, le=100, description="Module completion progress (0-100)")
-    status: Optional[Literal["active", "in_progress", "completed"]] = None
+    status: Optional[Literal["active", "in_progress", "completed", "ready_for_quiz"]] = None
+
+
+class QuizQuestionClient(BaseModel):
+    id: int
+    question: str
+    options: List[str]
+
+
+class QuizClientResponse(BaseModel):
+    id: str
+    module_id: str
+    title: str
+    questions: List[QuizQuestionClient]
+    total_questions: int
+
+
+class SubmitQuizRequest(BaseModel):
+    answers: List[int] = Field(..., description="List of 0-indexed selected option integers matching question order")
+
+
+class QuestionFeedback(BaseModel):
+    question_number: int
+    question: str
+    selected_option: int
+    is_correct: bool
+    explanation: str
+
+
+class QuizResultResponse(BaseModel):
+    score: int
+    correct_count: int
+    total_questions: int
+    passed: bool
+    module_progress: int
+    module_status: str
+    review_feedback: List[Dict[str, Any]]
 
 
 class EmployeePerformanceSummaryResponse(BaseModel):

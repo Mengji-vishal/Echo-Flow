@@ -9,6 +9,7 @@ from sqlalchemy import (
     ForeignKey,
     UniqueConstraint,
     CheckConstraint,
+    Boolean,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import declarative_base, relationship
@@ -49,6 +50,7 @@ class Employee(Base):
 
     calls = relationship("Call", back_populates="employee", cascade="all, delete-orphan")
     training_modules = relationship("TrainingModule", back_populates="employee", cascade="all, delete-orphan")
+    quiz_attempts = relationship("QuizAttempt", back_populates="employee", cascade="all, delete-orphan")
 
     def to_dict(self):
         return {
@@ -216,6 +218,7 @@ class TrainingModule(Base):
 
     employee = relationship("Employee", back_populates="training_modules")
     source_call = relationship("Call", back_populates="training_modules")
+    quiz = relationship("TrainingQuiz", uselist=False, back_populates="module", cascade="all, delete-orphan")
 
     def to_dict(self):
         return {
@@ -232,6 +235,70 @@ class TrainingModule(Base):
             "content": self.content,
             "progress": self.progress,
             "status": self.status,
+            "has_quiz": self.quiz is not None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class TrainingQuiz(Base):
+    __tablename__ = "training_quizzes"
+
+    id = Column(String(64), primary_key=True, index=True)
+    module_id = Column(String(64), ForeignKey("training_modules.id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
+    employee_id = Column(String(64), ForeignKey("employees.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String(255), nullable=False)
+    questions = Column(JSONB, nullable=False, default=list)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    module = relationship("TrainingModule", back_populates="quiz")
+    employee = relationship("Employee")
+    attempts = relationship("QuizAttempt", back_populates="quiz", cascade="all, delete-orphan", order_by="QuizAttempt.created_at.desc()")
+
+    def to_client_dict(self):
+        """Return quiz questions WITHOUT correct answers or internal answer indices to the client."""
+        return {
+            "id": self.id,
+            "module_id": self.module_id,
+            "title": self.title,
+            "questions": [
+                {
+                    "id": q.get("id", idx + 1),
+                    "question": q.get("question", ""),
+                    "options": q.get("options", []),
+                }
+                for idx, q in enumerate(self.questions or [])
+            ],
+            "total_questions": len(self.questions or []),
+        }
+
+
+class QuizAttempt(Base):
+    __tablename__ = "quiz_attempts"
+
+    id = Column(String(64), primary_key=True, index=True)
+    quiz_id = Column(String(64), ForeignKey("training_quizzes.id", ondelete="CASCADE"), nullable=False, index=True)
+    employee_id = Column(String(64), ForeignKey("employees.id", ondelete="CASCADE"), nullable=False, index=True)
+    score = Column(SmallInteger, nullable=False)
+    correct_count = Column(SmallInteger, nullable=False)
+    total_questions = Column(SmallInteger, nullable=False)
+    passed = Column(Boolean, nullable=False, default=False)
+    submitted_answers = Column(JSONB, nullable=False, default=list)
+    review_feedback = Column(JSONB, nullable=False, default=list)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    quiz = relationship("TrainingQuiz", back_populates="attempts")
+    employee = relationship("Employee", back_populates="quiz_attempts")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "quiz_id": self.quiz_id,
+            "employee_id": self.employee_id,
+            "score": self.score,
+            "correct_count": self.correct_count,
+            "total_questions": self.total_questions,
+            "passed": self.passed,
+            "review_feedback": self.review_feedback,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
         }

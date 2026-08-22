@@ -13,7 +13,6 @@ import { Settings } from './pages/settings/Settings';
 import { MyCalls } from './pages/calls/MyCalls';
 import { Training } from './pages/training/Training';
 import { PracticeScenarioInfo } from './practice/PracticeCard';
-import { mockAssessments } from '@shared/api/mockData';
 import { Assessment } from '@shared/types';
 
 interface EmployeeWorkspaceProps {
@@ -28,10 +27,8 @@ export function EmployeeWorkspace({ initialTab = 'dashboard' }: EmployeeWorkspac
   const [completedSteps, setCompletedSteps] = useState<number>(0);
   const [videoWatchStatus, setVideoWatchStatus] = useState<boolean[]>([false, false, false, false]);
   
-  // User written assessments history logs
-  const [userTests, setUserTests] = useState<Assessment[]>(
-    mockAssessments.filter(a => a.status === 'completed')
-  );
+  // User written assessments history logs (empty by default, populated dynamically)
+  const [userTests, setUserTests] = useState<Assessment[]>([]);
 
   const [practiceResults, setPracticeResults] = useState<{
     score: number;
@@ -176,3 +173,4 @@ export function EmployeeWorkspace({ initialTab = 'dashboard' }: EmployeeWorkspac
     </div>
   );
 }
+export default EmployeeWorkspace;

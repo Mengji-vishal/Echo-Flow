@@ -1,16 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PageContainer } from '@/components/employee/layout/PageContainer';
 import { Header } from '@/components/employee/layout/Header';
 import { Card } from '@/components/employee/common/Card';
-import { mockUserProgress } from '@shared/api/mockData';
 import { Check, Mic, Bell, User } from 'lucide-react';
+import { useAuth } from '@/components/auth/AuthContext';
 
 export const Settings: React.FC = () => {
+  const { user } = useAuth();
   const [profile, setProfile] = useState({
-    name: mockUserProgress.name,
-    email: "sarah.jenkins@echoflow.com",
-    role: mockUserProgress.role
+    name: user?.name || 'Representative',
+    email: user?.email || 'employee@echoflow.com',
+    role: user?.role === 'employee' ? 'Sales Representative' : user?.role || 'Representative',
   });
+
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        name: user.name || 'Representative',
+        email: user.email || 'employee@echoflow.com',
+        role: user.role === 'employee' ? 'Sales Representative' : user.role || 'Representative',
+      });
+    }
+  }, [user]);
+
   const [audioInput, setAudioInput] = useState("Default System Mic");
   const [coachAlerts, setCoachAlerts] = useState(true);
   const [showSaved, setShowSaved] = useState(false);
@@ -65,18 +77,19 @@ export const Settings: React.FC = () => {
                   type="email" 
                   className="form-input" 
                   value={profile.email} 
-                  onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                  readOnly
+                  style={{ backgroundColor: '#f8fafc', color: '#64748b' }}
                 />
               </div>
 
               <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>Assigned Domain (Read-Only)</label>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem' }}>Assigned Domain</label>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface-muted)', border: '1px solid var(--border)', padding: '0.65rem 1rem', borderRadius: 'var(--radius-md)' }}>
                   <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {mockUserProgress.assignedDomain}
+                    Personal Loans & Financial Advisory
                   </span>
                   <span className="badge-tag badge-tag-info" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>
-                    Assigned by Manager
+                    Active Track
                   </span>
                 </div>
               </div>
@@ -132,7 +145,7 @@ export const Settings: React.FC = () => {
                   type="button" 
                   className="btn btn-secondary" 
                   style={{ width: '100%', justifyContent: 'center' }}
-                  onClick={() => alert("Simulating microphone frequency calibration...")}
+                  onClick={() => alert("Microphone levels calibrated.")}
                 >
                   Test Audio Capture Level
                 </button>

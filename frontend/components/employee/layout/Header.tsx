@@ -1,6 +1,6 @@
 import React from 'react';
-import { Flame } from 'lucide-react';
-import { mockUserProgress } from '@shared/api/mockData';
+import { ShieldCheck } from 'lucide-react';
+import { useAuth } from '@/components/auth/AuthContext';
 
 interface HeaderProps {
   title: string;
@@ -8,6 +8,8 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
+  const { user } = useAuth();
+
   return (
     <header 
       style={{ 
@@ -36,10 +38,10 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
           boxShadow: 'var(--shadow-sm)'
         }}
       >
-        <Flame size={20} color="var(--warning)" fill="var(--warning)" />
+        <ShieldCheck size={20} color="var(--primary)" />
         <div>
-          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: '1.2' }}>{mockUserProgress.streak} Days</div>
-          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Practice Streak</div>
+          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: '1.2' }}>Verified</div>
+          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Live QA Tracking</div>
         </div>
       </div>
     </header>

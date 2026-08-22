@@ -9,6 +9,9 @@ from app.schemas.training import (
     TrainingModuleResponse,
     UpdateTrainingProgressRequest,
     EmployeePerformanceSummaryResponse,
+    QuizClientResponse,
+    SubmitQuizRequest,
+    QuizResultResponse,
 )
 from app.schemas.call import CallSummaryResponse
 
@@ -51,6 +54,80 @@ def get_employee_training_modules(
         employee_id=current_user.id,
     )
     return [m.to_dict() for m in modules]
+
+
+@router.post(
+    "/training/{module_id}/complete-learning",
+    response_model=TrainingModuleResponse,
+    summary="Mark lesson material as studied and prepare module for comprehension quiz",
+)
+def complete_learning_material(
+    module_id: str,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(require_employee),
+):
+    try:
+        updated = training_service.complete_module_learning(
+            db=db,
+            module_id=module_id,
+            employee_id=current_user.id,
+        )
+        return updated.to_dict()
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+
+@router.get(
+    "/training/{module_id}/quiz",
+    response_model=QuizClientResponse,
+    summary="Get comprehension quiz for a training module (correct answers kept secure)",
+)
+def get_module_quiz(
+    module_id: str,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(require_employee),
+):
+    try:
+        quiz_data = training_service.get_or_create_module_quiz(
+            db=db,
+            module_id=module_id,
+            employee_id=current_user.id,
+        )
+        return quiz_data
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+
+@router.post(
+    "/training/{module_id}/quiz/submit",
+    response_model=QuizResultResponse,
+    summary="Submit quiz answers, evaluate score, and update module completion status",
+)
+def submit_module_quiz(
+    module_id: str,
+    request: SubmitQuizRequest,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(require_employee),
+):
+    try:
+        result = training_service.submit_quiz_attempt(
+            db=db,
+            module_id=module_id,
+            employee_id=current_user.id,
+            submitted_answers=request.answers,
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
 
 
 @router.post(

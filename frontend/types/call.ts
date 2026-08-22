@@ -88,6 +88,7 @@ export interface CallSummary {
   provider_call_id?: string | null;
   questions_count: number;
   overall_score?: number | null;
+  analysis?: CallAnalysis | null;
   created_at: string;
 }
 

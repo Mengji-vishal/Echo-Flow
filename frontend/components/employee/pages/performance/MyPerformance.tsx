@@ -4,7 +4,7 @@ import { Header } from '@/components/employee/layout/Header';
 import { Card } from '@/components/employee/common/Card';
 import { ProgressBar } from '@/components/employee/common/ProgressBar';
 import { StatCard } from '@/components/employee/dashboard/StatCard';
-import { CheckCircle2, AlertCircle, TrendingUp, Sparkles, PhoneCall, ArrowRight, GraduationCap } from 'lucide-react';
+import { CheckCircle2, AlertCircle, TrendingUp, Sparkles, ArrowRight, GraduationCap } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthContext';
 import { getAuthToken } from '@/lib/auth';
 import { fetchEmployeePerformanceApi, EmployeePerformanceSummary } from '@/lib/employee';
@@ -33,20 +33,25 @@ export const MyPerformance: React.FC<MyPerformanceProps> = ({ onNavigate }) => {
   }, [activeToken]);
 
   const metrics = perfData?.metrics_averages || {
-    empathy: 85,
-    communication: 88,
-    discovery: 78,
-    objectionHandling: 82,
-    solutionOffering: 80,
-    closing: 74,
-    compliance: 90,
+    empathy: 0,
+    communication: 0,
+    discovery: 0,
+    objectionHandling: 0,
+    solutionOffering: 0,
+    closing: 0,
+    compliance: 0,
   };
 
   const getScoreColor = (val: number) => {
+    if (val === 0) return 'var(--text-muted)';
     if (val >= 85) return 'var(--success)';
     if (val >= 70) return 'var(--primary)';
     return 'var(--warning)';
   };
+
+  const completedCalls = perfData?.completed_calls || 0;
+  const strengths = perfData?.top_strengths || [];
+  const focusAreas = perfData?.focus_areas || [];
 
   return (
     <PageContainer>
@@ -66,23 +71,23 @@ export const MyPerformance: React.FC<MyPerformanceProps> = ({ onNavigate }) => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
         <StatCard 
           title="Overall QA Rating" 
-          value={isLoading ? '...' : `${perfData?.average_score || 84}%`} 
-          trend={`${perfData?.completed_calls || 0} calls evaluated`} 
+          value={isLoading ? '...' : `${perfData?.average_score || 0}%`} 
+          trend={`${completedCalls} calls evaluated`} 
         />
         <StatCard 
           title="Compliance Score" 
-          value={isLoading ? '...' : `${metrics.compliance || 90}%`} 
-          trend="Highest consistency" 
+          value={isLoading ? '...' : `${metrics.compliance || 0}%`} 
+          trend="Regulatory standard" 
         />
         <StatCard 
           title="Communication" 
-          value={isLoading ? '...' : `${metrics.communication || 88}%`} 
-          trend="Strong clarity" 
+          value={isLoading ? '...' : `${metrics.communication || 0}%`} 
+          trend="Dialogue clarity" 
         />
         <StatCard 
           title="Closing Performance" 
-          value={isLoading ? '...' : `${metrics.closing || 74}%`} 
-          trend="Focus area" 
+          value={isLoading ? '...' : `${metrics.closing || 0}%`} 
+          trend="Commitment conversion" 
         />
       </div>
 
@@ -118,15 +123,17 @@ export const MyPerformance: React.FC<MyPerformanceProps> = ({ onNavigate }) => {
             <h3 style={{ fontSize: '0.95rem', color: 'var(--success)', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}>
               <CheckCircle2 size={16} /> Key Strengths Identified
             </h3>
-            <ul style={{ paddingLeft: '1.25rem', fontSize: '0.825rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.5rem', lineHeight: '1.4' }}>
-              {(perfData?.top_strengths || [
-                'Maintains calm, empathetic demeanor during customer inquiries',
-                'Explains EMI breakdown and interest rate terms accurately',
-                'High vocal clarity and adherence to compliance guidelines',
-              ]).map((str, i) => (
-                <li key={i}>{str}</li>
-              ))}
-            </ul>
+            {strengths.length > 0 ? (
+              <ul style={{ paddingLeft: '1.25rem', fontSize: '0.825rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.5rem', lineHeight: '1.4' }}>
+                {strengths.map((str, i) => (
+                  <li key={i}>{str}</li>
+                ))}
+              </ul>
+            ) : (
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                No strengths recorded yet. Complete an assessment call to generate evaluations.
+              </p>
+            )}
           </Card>
 
           {/* Focus Areas */}
@@ -134,14 +141,17 @@ export const MyPerformance: React.FC<MyPerformanceProps> = ({ onNavigate }) => {
             <h3 style={{ fontSize: '0.95rem', color: 'var(--warning)', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}>
               <AlertCircle size={16} /> Focus Areas & Growth Targets
             </h3>
-            <ul style={{ paddingLeft: '1.25rem', fontSize: '0.825rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.5rem', lineHeight: '1.4' }}>
-              {(perfData?.focus_areas || [
-                'Proactive discovery questions before proposing loan amounts',
-                'Firm closing statements with agreed next-step followups',
-              ]).map((fa, i) => (
-                <li key={i}>{fa}</li>
-              ))}
-            </ul>
+            {focusAreas.length > 0 ? (
+              <ul style={{ paddingLeft: '1.25rem', fontSize: '0.825rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.5rem', lineHeight: '1.4' }}>
+                {focusAreas.map((fa, i) => (
+                  <li key={i}>{fa}</li>
+                ))}
+              </ul>
+            ) : (
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                No focus areas recorded yet.
+              </p>
+            )}
 
             {onNavigate && (
               <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>

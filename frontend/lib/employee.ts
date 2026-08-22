@@ -35,12 +35,47 @@ export interface TrainingModuleItem {
   learning_objectives: string[];
   content: {
     summary?: string;
+    framework?: string;
     steps?: Array<{ title: string; detail: string }>;
+    key_concepts?: string[];
+    script_examples?: Array<{ scenario: string; recommended_response: string }>;
+    practice_exercise?: string;
   };
   progress: number;
-  status: 'active' | 'in_progress' | 'completed';
+  status: 'active' | 'in_progress' | 'completed' | 'ready_for_quiz';
+  has_quiz?: boolean;
   created_at?: string | null;
   updated_at?: string | null;
+}
+
+export interface QuizQuestionItem {
+  id: number;
+  question: string;
+  options: string[];
+}
+
+export interface QuizData {
+  id: string;
+  module_id: string;
+  title: string;
+  questions: QuizQuestionItem[];
+  total_questions: number;
+}
+
+export interface QuizResult {
+  score: number;
+  correct_count: number;
+  total_questions: number;
+  passed: boolean;
+  module_progress: number;
+  module_status: string;
+  review_feedback: Array<{
+    question_number: number;
+    question: string;
+    selected_option: number;
+    is_correct: boolean;
+    explanation: string;
+  }>;
 }
 
 export interface TeamAnalyticsData {
@@ -107,11 +142,85 @@ export async function fetchEmployeeTrainingApi(token: string): Promise<TrainingM
   return data as TrainingModuleItem[];
 }
 
+export async function completeModuleLearningApi(token: string, moduleId: string): Promise<TrainingModuleItem> {
+  const res = await fetch(`${API_BASE_URL}/employee/training/${moduleId}/complete-learning`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  let data: any = {};
+  try {
+    data = await res.json();
+  } catch {
+    data = {};
+  }
+
+  if (!res.ok) {
+    throw new Error(formatErrorMessage(data.detail || data.message, 'Failed to complete lesson material.'));
+  }
+
+  return data as TrainingModuleItem;
+}
+
+export async function fetchModuleQuizApi(token: string, moduleId: string): Promise<QuizData> {
+  const res = await fetch(`${API_BASE_URL}/employee/training/${moduleId}/quiz`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  let data: any = {};
+  try {
+    data = await res.json();
+  } catch {
+    data = {};
+  }
+
+  if (!res.ok) {
+    throw new Error(formatErrorMessage(data.detail || data.message, 'Failed to load quiz.'));
+  }
+
+  return data as QuizData;
+}
+
+export async function submitModuleQuizApi(
+  token: string,
+  moduleId: string,
+  answers: number[]
+): Promise<QuizResult> {
+  const res = await fetch(`${API_BASE_URL}/employee/training/${moduleId}/quiz/submit`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ answers }),
+  });
+
+  let data: any = {};
+  try {
+    data = await res.json();
+  } catch {
+    data = {};
+  }
+
+  if (!res.ok) {
+    throw new Error(formatErrorMessage(data.detail || data.message, 'Failed to submit quiz.'));
+  }
+
+  return data as QuizResult;
+}
+
 export async function updateTrainingProgressApi(
   token: string,
   moduleId: string,
   progress: number,
-  status?: 'active' | 'in_progress' | 'completed'
+  status?: 'active' | 'in_progress' | 'completed' | 'ready_for_quiz'
 ): Promise<TrainingModuleItem> {
   const res = await fetch(`${API_BASE_URL}/employee/training/${moduleId}/progress`, {
     method: 'POST',

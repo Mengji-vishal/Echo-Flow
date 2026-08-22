@@ -7,9 +7,9 @@ import {
   Award, 
   Settings as SettingsIcon,
   Mic,
-  LogOut
+  LogOut,
+  UserCheck
 } from 'lucide-react';
-import { mockUserProgress } from '@shared/api/mockData';
 import { useAuth } from '@/components/auth/AuthContext';
 
 interface SidebarProps {
@@ -19,11 +19,13 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate }) => {
   const { user, logout } = useAuth();
-  const displayName = user?.name || mockUserProgress.name;
+  const displayName = user?.name || 'Representative';
+  const roleDisplay = user?.role === 'employee' ? 'Sales Representative' : user?.role || 'Representative';
 
   const navItems = [
     { id: 'dashboard', label: 'Overview', icon: <LayoutDashboard size={18} /> },
-    { id: 'practice', label: 'AI Practice', icon: <PlayCircle size={18} /> },
+    { id: 'training', label: 'AI Training', icon: <PlayCircle size={18} /> },
+    { id: 'calls', label: 'My Calls', icon: <BarChart3 size={18} /> },
     { id: 'performance', label: 'My Performance', icon: <BarChart3 size={18} /> },
     { id: 'progress', label: 'Progress & Skills', icon: <TrendingUp size={18} /> },
     { id: 'achievements', label: 'Achievements', icon: <Award size={18} /> },
@@ -66,20 +68,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate }) => {
           marginBottom: '1.5rem' 
         }}
       >
-        <img 
-          src={mockUserProgress.avatar} 
-          alt={displayName} 
-          style={{ width: '38px', height: '38px', borderRadius: '50%', border: '2px solid var(--primary-light)' }} 
-        />
+        <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.9rem' }}>
+          {displayName.slice(0, 2).toUpperCase()}
+        </div>
         <div style={{ overflow: 'hidden' }}>
           <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
             {displayName}
           </h4>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.15rem' }}>
             <span className="badge-tag badge-tag-info" style={{ fontSize: '0.6rem', padding: '0.05rem 0.3rem' }}>
-              {user?.role ? user.role.toUpperCase() : `LVL ${mockUserProgress.level}`}
+              {roleDisplay}
             </span>
-            <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{mockUserProgress.xp} XP</span>
           </div>
         </div>
       </div>
@@ -87,8 +86,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate }) => {
       {/* Navigation options */}
       <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flexGrow: 1 }}>
         {navItems.map(item => {
-          const isActive = activeTab === item.id || 
-                           (item.id === 'practice' && (activeTab === 'live-practice' || activeTab === 'practice-results'));
+          const isActive = activeTab === item.id;
           return (
             <button
               key={item.id}
