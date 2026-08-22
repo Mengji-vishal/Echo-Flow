@@ -75,13 +75,15 @@ class VoiceService:
             speech_prompt = f"Thank you. Question {question_number}: {question_text}"
 
         response = VoiceResponse()
+        response.say(speech_prompt)
         gather = Gather(
             input="speech",
             action=action_url,
             method="POST",
             speech_timeout="auto",
+            timeout=10,
+            language="en-IN",
         )
-        gather.say(speech_prompt)
         response.append(gather)
         # Fallback redirect if user remained silent
         response.redirect(action_url, method="POST")

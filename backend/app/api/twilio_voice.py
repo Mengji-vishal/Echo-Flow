@@ -1,10 +1,11 @@
 import logging
+import threading
 import uuid
 from datetime import datetime, timezone
 from urllib.parse import parse_qs
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.orm import Session
-from app.db.session import get_db
+from app.db.session import get_db, SessionLocal
 from app.db.models import Call, CallQuestion, CallTranscript
 from app.services.voice_service import voice_service
 from app.services.analysis_service import analysis_service
@@ -265,16 +266,25 @@ async def twilio_voice_respond_webhook(
     )
     logger.info(f"Assessment call '{call_id}' completed with 5/5 answers. Total duration: {call.duration_seconds}s")
 
-    # 4. Trigger Post-Call Gemini Analysis and Training Generation
-    try:
-        analysis = analysis_service.analyze_call(db=db, call_id=call_id)
-        training_service.generate_modules_for_call(db=db, call_id=call_id, analysis=analysis)
-        print(f"   [AI Performance Analysis & Training] Evaluated with Gemini & Generated Training Modules for call '{call_id}'.", flush=True)
-        logger.info(f"Gemini evaluation and training generation succeeded for call '{call_id}' (QA Score: {analysis.overall_score})")
-    except Exception as e:
-        logger.error(f"Post-call analysis generation failed for call '{call_id}': {str(e)}")
-
+    # 4. Return completion TwiML IMMEDIATELY (Twilio has a ~15s webhook timeout)
     completion_twiml = voice_service.generate_completion_twiml()
+
+    # 5. Trigger Post-Call Gemini Analysis in background thread
+    #    (avoids blocking the Twilio webhook response)
+    def _run_post_call_analysis(cid: str):
+        bg_db = SessionLocal()
+        try:
+            analysis = analysis_service.analyze_call(db=bg_db, call_id=cid)
+            training_service.generate_modules_for_call(db=bg_db, call_id=cid, analysis=analysis)
+            print(f"   [Background] Gemini analysis & training completed for call '{cid}'.", flush=True)
+            logger.info(f"Background Gemini analysis succeeded for call '{cid}' (QA Score: {analysis.overall_score})")
+        except Exception as e:
+            logger.error(f"Background post-call analysis failed for '{cid}': {str(e)}")
+        finally:
+            bg_db.close()
+
+    threading.Thread(target=_run_post_call_analysis, args=(call_id,), daemon=True).start()
+
     return Response(content=completion_twiml, media_type="application/xml")
 
 
