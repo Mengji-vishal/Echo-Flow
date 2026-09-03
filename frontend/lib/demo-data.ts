@@ -39,11 +39,11 @@ export const DEFAULT_CALL_SCENARIO =
   'Customer wants an ₹8 lakh personal loan for home renovation and is inquiring about interest rates, tenure flexibility, and processing terms.';
 
 export const DEFAULT_CALL_QUESTIONS = [
-  'Why does the customer need the personal loan?',
-  'What is the customer\'s monthly take-home income?',
-  'What loan tenure do they prefer?',
-  'Do they currently have any existing loans or EMIs?',
-  'What concerns do they have about the monthly EMI payments?',
+  "I'm looking for a personal loan. Can you explain what options you have and how much I can get?",
+  "What documents do I need to provide to apply for the loan?",
+  "I'm worried about the interest rate. Can you explain how much interest I would have to pay?",
+  "What would happen if I miss one of my monthly EMI payments?",
+  "I'm still not sure whether I should take this loan. Why should I choose your loan instead of another option?",
 ];
 
 export const DEMO_EMPLOYEES: Employee[] = [];
