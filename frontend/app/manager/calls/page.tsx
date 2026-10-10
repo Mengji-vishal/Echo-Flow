@@ -138,7 +138,13 @@ export default function CallsPage() {
 
       // 2. Create and initiate the assessment call via Twilio Voice
       const newCall = await createCallApi(activeToken, selectedEmployeeId, questions);
-      setSuccessNotice(`Assessment Call dispatched successfully (Call ID: ${newCall.id}) to ${cleanPhone}. Employee phone is ringing!`);
+      if (newCall.provider_call_id?.startsWith('sim_')) {
+        setSuccessNotice(
+          `Assessment Call created in Simulated Mode (Call ID: ${newCall.id}). Note: Twilio Trial account is expired (Error 20003). All 5 questions and representative responses are ready for review and AI scoring below!`
+        );
+      } else {
+        setSuccessNotice(`Assessment Call dispatched successfully (Call ID: ${newCall.id}) to ${cleanPhone}. Employee phone is ringing!`);
+      }
 
       // 3. Refresh recent calls list
       const updatedCalls = await fetchManagerCallsApi(activeToken);

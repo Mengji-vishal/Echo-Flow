@@ -193,6 +193,9 @@ export default function CallDetailPage() {
                     {call.employee_name || 'Representative Evaluation'}
                   </h2>
                   {getStatusBadge(call.status)}
+                  {call.provider_call_id?.startsWith('sim_') && (
+                    <Badge variant="neutral" size="sm">Simulated Telephony</Badge>
+                  )}
                 </div>
                 <p className="text-xs text-slate-500 mt-0.5">
                   {call.employee_email || call.employee_id} • Call ID: <span className="font-mono">{call.id}</span>
