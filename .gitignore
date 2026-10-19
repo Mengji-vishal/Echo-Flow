@@ -23,9 +23,10 @@ venv/
 .vscode/
 .idea/
 
-# OS
+# OS & Archives
 .DS_Store
 Thumbs.db
+*.zip
 
 .next/
 .env

@@ -27,6 +27,7 @@ import {
 import { useAuth } from '@/components/auth/AuthContext';
 import { getAuthToken } from '@/lib/auth';
 import { fetchCallDetailApi } from '@/lib/calls';
+import { formatCallDate } from '@/lib/utils';
 import { CallDetail, CallTranscript } from '@/types/call';
 
 export default function TranscriptDetailPage() {
@@ -77,19 +78,7 @@ export default function TranscriptDetailPage() {
   };
 
   const formatDate = (isoStr?: string | null) => {
-    if (!isoStr) return '—';
-    try {
-      const d = new Date(isoStr);
-      return d.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return isoStr;
-    }
+    return formatCallDate(isoStr, { includeYear: true });
   };
 
   const formatDuration = (seconds?: number | null) => {
@@ -225,11 +214,10 @@ export default function TranscriptDetailPage() {
           <button
             type="button"
             onClick={() => setViewMode('qa')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1.5 transition-colors ${
-              viewMode === 'qa'
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1.5 transition-colors ${viewMode === 'qa'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
+              }`}
           >
             <ListOrdered className="h-3.5 w-3.5" />
             <span>Structured Q&A Breakdown</span>
@@ -237,11 +225,10 @@ export default function TranscriptDetailPage() {
           <button
             type="button"
             onClick={() => setViewMode('chronological')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1.5 transition-colors ${
-              viewMode === 'chronological'
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1.5 transition-colors ${viewMode === 'chronological'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
+              }`}
           >
             <MessageSquare className="h-3.5 w-3.5" />
             <span>Full Chronological Dialogue Log</span>
@@ -354,25 +341,22 @@ export default function TranscriptDetailPage() {
                     className={`flex items-start space-x-3 ${isAi ? '' : 'pl-4'}`}
                   >
                     <div
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
-                        isAi ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
-                      }`}
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${isAi ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
+                        }`}
                     >
                       {isAi ? <Bot className="h-4 w-4" /> : <User className="h-4 w-4" />}
                     </div>
 
                     <div
-                      className={`flex-1 p-3.5 rounded-xl border ${
-                        isAi
+                      className={`flex-1 p-3.5 rounded-xl border ${isAi
                           ? 'bg-blue-50/50 border-blue-100'
                           : 'bg-white border-slate-200 shadow-xs'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between mb-1.5">
                         <span
-                          className={`text-[10px] font-bold uppercase tracking-wider ${
-                            isAi ? 'text-blue-700' : 'text-emerald-700'
-                          }`}
+                          className={`text-[10px] font-bold uppercase tracking-wider ${isAi ? 'text-blue-700' : 'text-emerald-700'
+                            }`}
                         >
                           {isAi ? 'AI Assessment Caller' : call.employee_name || 'Representative'}
                         </span>

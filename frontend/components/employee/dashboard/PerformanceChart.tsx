@@ -1,82 +1,20 @@
 import React from 'react';
 import { Card } from '../common/Card';
+import { CompetencyPieChart } from '@/components/ui/CompetencyPieChart';
 
 interface PerformanceChartProps {
   scores?: number[];
+  metrics?: Record<string, number>;
+  isLoading?: boolean;
 }
 
-export const PerformanceChart: React.FC<PerformanceChartProps> = ({ scores }) => {
-  // SVG Chart Dimensions
-  const width = 500;
-  const height = 150;
-  const padding = 20;
-
-  const data = scores && scores.length > 0 ? scores : [];
-
-  if (data.length === 0) {
-    return (
-      <Card style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <h3 style={{ fontSize: '0.95rem', color: 'var(--text-primary)', fontWeight: 700 }}>Performance Progression</h3>
-        <div style={{ padding: '2.5rem 1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-          No performance data available yet. Complete an assessment call to track your progress curve.
-        </div>
-      </Card>
-    );
-  }
-
-  // Calculate point coordinates
-  const points = data.map((val, index) => {
-    const x = padding + (index * (width - padding * 2)) / Math.max(data.length - 1, 1);
-    const y = height - padding - (val * (height - padding * 2)) / 100;
-    return { x, y, score: val, label: `Call ${index + 1}` };
-  });
-
-  // Construct path coordinate string
-  const pathD = points.reduce((acc, pt, index) => {
-    return acc + `${index === 0 ? 'M' : 'L'} ${pt.x} ${pt.y} `;
-  }, '');
-
-  // Construct area coordinate string under the curve
-  const areaD = `${pathD} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`;
-
+export const PerformanceChart: React.FC<PerformanceChartProps> = ({ metrics, isLoading }) => {
   return (
     <Card style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <h3 style={{ fontSize: '0.95rem', color: 'var(--text-primary)', fontWeight: 700 }}>Performance Progression</h3>
-      
-      <div style={{ position: 'relative', width: '100%', height: '180px', display: 'flex', flexDirection: 'column' }}>
-        <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: '140px' }}>
-          <defs>
-            <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.15" />
-              <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.0" />
-            </linearGradient>
-          </defs>
-
-          {/* Grid lines */}
-          <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="var(--border)" strokeDasharray="4 4" />
-          <line x1={padding} y1={height / 2} x2={width - padding} y2={height / 2} stroke="var(--border)" strokeDasharray="4 4" />
-          <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="var(--border)" />
-
-          {/* Area under line */}
-          <path d={areaD} fill="url(#chartGrad)" />
-
-          {/* Core connection Line */}
-          <path d={pathD} fill="none" stroke="var(--primary)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-
-          {/* Data nodes */}
-          {points.map((pt, i) => (
-            <g key={i}>
-              <circle cx={pt.x} cy={pt.y} r="5" fill="#ffffff" stroke="var(--primary)" strokeWidth="3" />
-              <text x={pt.x} y={pt.y - 10} textAnchor="middle" style={{ fontSize: '10px', fontWeight: 'bold', fill: 'var(--text-primary)' }}>
-                {pt.score}%
-              </text>
-              <text x={pt.x} y={height - 2} textAnchor="middle" style={{ fontSize: '10px', fill: 'var(--text-muted)' }}>
-                {pt.label}
-              </text>
-            </g>
-          ))}
-        </svg>
-      </div>
+      <h3 style={{ fontSize: '0.95rem', color: 'var(--text-primary)', fontWeight: 700 }}>
+        Performance Progression
+      </h3>
+      <CompetencyPieChart skills={metrics} isLoading={isLoading} />
     </Card>
   );
 };

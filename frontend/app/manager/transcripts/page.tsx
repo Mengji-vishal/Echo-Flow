@@ -24,6 +24,7 @@ import {
 import { useAuth } from '@/components/auth/AuthContext';
 import { getAuthToken } from '@/lib/auth';
 import { fetchManagerCallsApi } from '@/lib/calls';
+import { formatCallDate } from '@/lib/utils';
 import { CallSummary } from '@/types/call';
 
 export default function TranscriptsPage() {
@@ -55,18 +56,7 @@ export default function TranscriptsPage() {
   }, [loadData]);
 
   const formatDate = (isoStr: string) => {
-    try {
-      const d = new Date(isoStr);
-      return d.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return isoStr;
-    }
+    return formatCallDate(isoStr, { includeYear: true });
   };
 
   const formatDuration = (seconds?: number | null) => {
@@ -150,11 +140,10 @@ export default function TranscriptsPage() {
               key={st}
               type="button"
               onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${
-                statusFilter === st
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${statusFilter === st
                   ? 'bg-blue-600 text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
+                }`}
             >
               {st.replace('_', ' ')}
             </button>

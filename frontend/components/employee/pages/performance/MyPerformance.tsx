@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { PageContainer } from '@/components/employee/layout/PageContainer';
 import { Header } from '@/components/employee/layout/Header';
 import { Card } from '@/components/employee/common/Card';
-import { ProgressBar } from '@/components/employee/common/ProgressBar';
+import { CompetencyPieChart } from '@/components/ui/CompetencyPieChart';
 import { StatCard } from '@/components/employee/dashboard/StatCard';
 import { CheckCircle2, AlertCircle, TrendingUp, Sparkles, ArrowRight, GraduationCap } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthContext';
@@ -41,14 +41,6 @@ export const MyPerformance: React.FC<MyPerformanceProps> = ({ onNavigate }) => {
     closing: 0,
     compliance: 0,
   };
-
-  const getScoreColor = (val: number) => {
-    if (val === 0) return 'var(--text-muted)';
-    if (val >= 85) return 'var(--success)';
-    if (val >= 70) return 'var(--primary)';
-    return 'var(--warning)';
-  };
-
   const completedCalls = perfData?.completed_calls || 0;
   const strengths = perfData?.top_strengths || [];
   const focusAreas = perfData?.focus_areas || [];
@@ -99,20 +91,7 @@ export const MyPerformance: React.FC<MyPerformanceProps> = ({ onNavigate }) => {
               <TrendingUp size={18} color="var(--primary)" />
               7 Skill Competency Breakdown
             </h3>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-              {Object.entries(metrics).map(([key, val]) => (
-                <div key={key}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
-                    <span style={{ color: 'var(--text-secondary)', textTransform: 'capitalize' }}>
-                      {key.replace(/([A-Z])/g, ' $1')}
-                    </span>
-                    <span style={{ fontWeight: 700, color: getScoreColor(val) }}>{val}%</span>
-                  </div>
-                  <ProgressBar progress={val} fillColor={getScoreColor(val)} />
-                </div>
-              ))}
-            </div>
+            <CompetencyPieChart skills={metrics} isLoading={isLoading} />
           </Card>
         </div>
 

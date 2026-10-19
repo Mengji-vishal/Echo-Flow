@@ -84,7 +84,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       >
         {/* Left Side: Performance Trend & Coaching Panel */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <PerformanceChart scores={recentScores} />
+          <PerformanceChart 
+            scores={recentScores} 
+            metrics={perfData?.metrics_averages} 
+            isLoading={isLoading} 
+          />
           <CoachingRecommendation 
             focusAreas={perfData?.focus_areas} 
             onPracticeClick={() => onNavigate('training')} 

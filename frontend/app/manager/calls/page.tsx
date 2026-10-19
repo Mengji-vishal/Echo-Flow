@@ -26,6 +26,7 @@ import {
 import { useAuth } from '@/components/auth/AuthContext';
 import { getAuthToken } from '@/lib/auth';
 import { fetchEmployeesApi, updateEmployeePhoneApi, createCallApi, fetchManagerCallsApi } from '@/lib/calls';
+import { formatCallDate } from '@/lib/utils';
 import { EmployeeItem, CallSummary } from '@/types/call';
 
 const DEFAULT_QUESTIONS = [
@@ -177,17 +178,7 @@ export default function CallsPage() {
   };
 
   const formatDate = (isoStr: string) => {
-    try {
-      const d = new Date(isoStr);
-      return d.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return isoStr;
-    }
+    return formatCallDate(isoStr);
   };
 
   const formatDuration = (seconds?: number | null) => {
@@ -468,11 +459,10 @@ export default function CallsPage() {
                   size="lg"
                   isLoading={isSubmitting}
                   disabled={!selectedEmployeeId || !isValidPhone || isSubmitting}
-                  className={`w-full text-white font-bold gap-2 shadow-md ${
-                    error
+                  className={`w-full text-white font-bold gap-2 shadow-md ${error
                       ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/20'
                       : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20'
-                  }`}
+                    }`}
                 >
                   {error ? (
                     <>

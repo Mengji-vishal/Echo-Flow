@@ -27,6 +27,7 @@ import {
 import { useAuth } from '@/components/auth/AuthContext';
 import { getAuthToken } from '@/lib/auth';
 import { fetchCallDetailApi, completeCallApi } from '@/lib/calls';
+import { formatCallDate } from '@/lib/utils';
 import { CallDetail } from '@/types/call';
 
 export default function CallDetailPage() {
@@ -93,19 +94,7 @@ export default function CallDetailPage() {
   };
 
   const formatDate = (isoStr?: string | null) => {
-    if (!isoStr) return '—';
-    try {
-      const d = new Date(isoStr);
-      return d.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return isoStr;
-    }
+    return formatCallDate(isoStr, { includeYear: true });
   };
 
   const formatDuration = (seconds?: number | null) => {
@@ -324,11 +313,10 @@ export default function CallDetailPage() {
                   return (
                     <div
                       key={t.id || idx}
-                      className={`p-3 rounded-xl border text-xs leading-relaxed space-y-1 ${
-                        isAi
+                      className={`p-3 rounded-xl border text-xs leading-relaxed space-y-1 ${isAi
                           ? 'bg-blue-50/60 border-blue-100 ml-0 mr-6'
                           : 'bg-emerald-50/50 border-emerald-100 ml-6 mr-0'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className={`font-bold flex items-center space-x-1.5 ${isAi ? 'text-blue-700' : 'text-emerald-700'}`}>
@@ -401,13 +389,12 @@ export default function CallDetailPage() {
                           </div>
                           <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                             <div
-                              className={`h-full rounded-full transition-all ${
-                                val >= 85
+                              className={`h-full rounded-full transition-all ${val >= 85
                                   ? 'bg-emerald-500'
                                   : val >= 70
-                                  ? 'bg-blue-600'
-                                  : 'bg-amber-500'
-                              }`}
+                                    ? 'bg-blue-600'
+                                    : 'bg-amber-500'
+                                }`}
                               style={{ width: `${Math.min(100, Math.max(0, val))}%` }}
                             />
                           </div>

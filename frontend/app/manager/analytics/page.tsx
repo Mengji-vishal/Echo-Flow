@@ -21,6 +21,7 @@ import Link from 'next/link';
 import { useAuth } from '@/components/auth/AuthContext';
 import { getAuthToken } from '@/lib/auth';
 import { fetchTeamAnalyticsApi, TeamAnalyticsData } from '@/lib/employee';
+import { CompetencyPieChart } from '@/components/ui/CompetencyPieChart';
 
 function AnalyticsContent() {
   const searchParams = useSearchParams();
@@ -48,7 +49,7 @@ function AnalyticsContent() {
           }
         }
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setIsLoading(false));
   }, [activeToken, empParam]);
 
@@ -153,11 +154,10 @@ function AnalyticsContent() {
                 <div
                   key={emp.id}
                   onClick={() => setSelectedEmployeeId(emp.id)}
-                  className={`group relative p-3.5 rounded-xl border transition-all duration-150 cursor-pointer flex flex-col justify-between ${
-                    isSelected
+                  className={`group relative p-3.5 rounded-xl border transition-all duration-150 cursor-pointer flex flex-col justify-between ${isSelected
                       ? 'border-blue-600 bg-blue-50/50 shadow-sm ring-2 ring-blue-500/20'
                       : 'border-slate-200/80 bg-white hover:border-slate-300 hover:shadow-xs'
-                  }`}
+                    }`}
                 >
                   <div>
                     <div className="flex items-center justify-between mb-2">
@@ -165,9 +165,8 @@ function AnalyticsContent() {
                       <span className="text-sm font-bold text-slate-900">{emp.qaScore}%</span>
                     </div>
 
-                    <h4 className={`text-xs font-bold transition-colors truncate ${
-                      isSelected ? 'text-blue-700' : 'text-slate-900 group-hover:text-blue-600'
-                    }`}>
+                    <h4 className={`text-xs font-bold transition-colors truncate ${isSelected ? 'text-blue-700' : 'text-slate-900 group-hover:text-blue-600'
+                      }`}>
                       {emp.name}
                     </h4>
                     <div className="flex items-center space-x-1 mt-0.5 text-[10px] text-slate-500">
@@ -264,25 +263,8 @@ function AnalyticsContent() {
               </CardTitle>
               <CardDescription>Verified skill benchmarks across 7 core sales evaluation dimensions</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {Object.entries(selectedEmployee.skills).map(([skill, score]) => (
-                <div key={skill} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-slate-700 capitalize">
-                      {skill.replace(/([A-Z])/g, ' $1').trim()}
-                    </span>
-                    <span className="font-mono font-bold text-slate-900">{score}%</span>
-                  </div>
-                  <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-300 ${
-                        score >= 85 ? 'bg-emerald-500' : score >= 75 ? 'bg-blue-600' : 'bg-amber-500'
-                      }`}
-                      style={{ width: `${score}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+            <CardContent>
+              <CompetencyPieChart skills={selectedEmployee.skills} />
             </CardContent>
           </Card>
         </div>
